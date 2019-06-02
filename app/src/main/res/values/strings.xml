@@ -4,4 +4,6 @@
     <string name="y">Y:</string>
     <string name="z">Z:</string>
     <string name="ip_address">IP Address</string>
+    <string name="plus">+</string>
+    <string name="minus">-</string>
 </resources>
