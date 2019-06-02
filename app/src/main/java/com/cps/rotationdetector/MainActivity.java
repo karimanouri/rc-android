@@ -16,7 +16,7 @@ public class MainActivity extends AppCompatActivity {
 
     private RotationAngleDetector.RotationAngleListener rotationAngleListener;
 
-    private TextView txtY, txtZ, txtSpeed;
+    private TextView txtAngle, txtZ, txtSpeed;
     private EditText edtIpAddress;
 
     private DatagramSocket socket;
@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         edtIpAddress = findViewById(R.id.edt_ip_address);
-        txtY = findViewById(R.id.txt_y);
+        txtAngle = findViewById(R.id.txt_angle);
         txtZ = findViewById(R.id.txt_z);
         txtSpeed = findViewById(R.id.txt_speed);
         Button btnPlusSpeed = findViewById(R.id.btn_plus);
@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
         rotationAngleListener = new RotationAngleDetector.RotationAngleListener() {
             @Override
             public void onRotation(float angleInAxisX, float angleInAxisY, float angleInAxisZ) {
-                txtY.setText(String.valueOf(angleInAxisY));
+                txtAngle.setText(String.valueOf(convertToAngle(angleInAxisY)));
                 txtZ.setText(String.valueOf(angleInAxisZ));
                 UdpSend udpSend = new UdpSend(socket, edtIpAddress.getText().toString());
                 udpSend.execute(convertToAngle(angleInAxisY), speed);
@@ -67,12 +67,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int convertToAngle(float y) {
-        int angle = 90 - (int) y;
+        int angle = 90 + (int) y;
         if(angle > 180)
             angle = 180;
         else if(angle < 0)
             angle = 0;
-        return angle / 3;
+        return angle;
     }
 
     private View.OnClickListener btnSpeedListener = new View.OnClickListener() {

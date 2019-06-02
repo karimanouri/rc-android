@@ -1,7 +1,6 @@
 <resources>
     <string name="app_name">Rotation Detector</string>
-    <string name="x">X:</string>
-    <string name="y">Y:</string>
+    <string name="angle">Angle:</string>
     <string name="z">Z:</string>
     <string name="ip_address">IP Address</string>
     <string name="plus">+</string>
