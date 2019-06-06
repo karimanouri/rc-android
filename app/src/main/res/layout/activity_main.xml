@@ -8,45 +8,30 @@
     tools:context=".MainActivity">
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
-        android:orientation="horizontal">
-        <EditText
-            android:id="@+id/edt_ip_address"
+        android:orientation="vertical">
+        <Button
+            android:id="@+id/btn_plus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_margin="10dp"
-            android:hint="@string/ip_address"
-            android:maxLines="1"
-            android:layout_weight="1"
-            android:layout_gravity="center_vertical"/>
-        <LinearLayout
+            android:text="@string/plus" />
+        <TextView
+            android:id="@+id/txt_speed"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_margin="10dp"
-            android:orientation="vertical"
-            android:layout_weight="0">
-            <Button
-                android:id="@+id/btn_plus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/plus" />
-            <TextView
-                android:id="@+id/txt_speed"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="5dp"
-                android:layout_gravity="center_horizontal" />
-            <Button
-                android:id="@+id/btn_minus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/minus"/>
-        </LinearLayout>
+            android:layout_margin="5dp"
+            android:layout_gravity="center_horizontal" />
+        <Button
+            android:id="@+id/btn_minus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/minus"/>
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/line_angle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -68,6 +53,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/line_z"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"

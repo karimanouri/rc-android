@@ -5,7 +5,7 @@
         android:defaultValue="@string/default_ip"
         android:inputType="number"
         android:digits="0123456789."
-        android:key="ip_text"
+        android:key="@string/preference_key_ip"
         android:maxLines="1"
         android:selectAllOnFocus="true"
         android:singleLine="true"
@@ -13,7 +13,7 @@
 
     <SwitchPreference
         android:defaultValue="false"
-        android:key="switch_debug"
+        android:key="@string/preference_key_debug"
         android:title="@string/debug_mode" />
 
 </PreferenceScreen>

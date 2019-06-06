@@ -285,7 +285,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             // to their values. When their values change, their summaries are
             // updated to reflect the new value, per the Android Design
             // guidelines.
-            bindPreferenceSummaryToValue(findPreference("ip_text"));
+            bindPreferenceSummaryToValue(findPreference(getString(R.string.preference_key_ip)));
 
             InputFilter[] filters = new InputFilter[1];
             filters[0] = new InputFilter() {
