@@ -2,7 +2,6 @@
     <string name="app_name">Rotation Detector</string>
     <string name="angle">Angle:</string>
     <string name="z">Z:</string>
-    <string name="ip_address">IP Address</string>
     <string name="plus">+</string>
     <string name="minus">-</string>
 
@@ -11,6 +10,10 @@
     <string name="title_activity_settings">Settings</string>
 
     <!-- Strings related to Settings -->
+
+    <string name="ip_address">IP Address</string>
+    <string name="debug_mode">Debug Mode</string>
+    <string name="default_ip">192.168.43.22</string>
 
     <!-- Example General settings -->
     <string name="pref_header_general">General</string>

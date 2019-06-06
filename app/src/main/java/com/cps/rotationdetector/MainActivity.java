@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.preference.PreferenceActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -32,19 +33,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        edtIpAddress = findViewById(R.id.edt_ip_address);
-        txtAngle = findViewById(R.id.txt_angle);
-        txtZ = findViewById(R.id.txt_z);
-        txtSpeed = findViewById(R.id.txt_speed);
-        Button btnPlusSpeed = findViewById(R.id.btn_plus);
-        btnPlusSpeed.setOnClickListener(btnSpeedListener);
-        Button btnMinusSpeed = findViewById(R.id.btn_minus);
-        btnMinusSpeed.setOnClickListener(btnSpeedListener);
-        txtSpeed.setText(String.valueOf(speed));
+
+        initUiComponent();
 
         Sensey.getInstance().init(this, Sensey.SAMPLING_PERIOD_UI);
-
-        startSettingsActivity = new Intent(this, SettingsActivity.class);
 
         try {
             socket = new DatagramSocket();
@@ -63,6 +55,8 @@ public class MainActivity extends AppCompatActivity {
         };
 
         Sensey.getInstance().startRotationAngleDetection(rotationAngleListener);
+
+        initStartSettingsIntent();
     }
 
     @Override
@@ -73,9 +67,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if(item.getItemId() == R.id.menu_item_settings) {
+        if(item.getItemId() == R.id.menu_item_settings)
             startActivity(startSettingsActivity);
-        }
         return super.onOptionsItemSelected(item);
     }
 
@@ -112,4 +105,22 @@ public class MainActivity extends AppCompatActivity {
             txtSpeed.setText(String.valueOf(speed));
         }
     };
+
+    private void initUiComponent() {
+        edtIpAddress = findViewById(R.id.edt_ip_address);
+        txtAngle = findViewById(R.id.txt_angle);
+        txtZ = findViewById(R.id.txt_z);
+        txtSpeed = findViewById(R.id.txt_speed);
+        Button btnPlusSpeed = findViewById(R.id.btn_plus);
+        btnPlusSpeed.setOnClickListener(btnSpeedListener);
+        Button btnMinusSpeed = findViewById(R.id.btn_minus);
+        btnMinusSpeed.setOnClickListener(btnSpeedListener);
+        txtSpeed.setText(String.valueOf(speed));
+    }
+
+    private void initStartSettingsIntent() {
+        startSettingsActivity = new Intent(this, SettingsActivity.class);
+        startSettingsActivity.putExtra(PreferenceActivity.EXTRA_NO_HEADERS, true);
+        startSettingsActivity.putExtra(PreferenceActivity.EXTRA_SHOW_FRAGMENT, SettingsActivity.SettingsPreferenceFragment.class.getName());
+    }
 }

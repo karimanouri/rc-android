@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <EditTextPreference
+        android:defaultValue="@string/default_ip"
+        android:inputType="number"
+        android:digits="0123456789."
+        android:key="ip_text"
+        android:maxLines="1"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:title="@string/ip_address" />
+
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="switch_debug"
+        android:title="@string/debug_mode" />
+
+</PreferenceScreen>

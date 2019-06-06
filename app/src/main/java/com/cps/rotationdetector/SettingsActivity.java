@@ -9,6 +9,7 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
@@ -18,6 +19,7 @@ import androidx.appcompat.app.ActionBar;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.preference.RingtonePreference;
+import android.text.InputFilter;
 import android.text.TextUtils;
 import android.view.MenuItem;
 
@@ -172,6 +174,7 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
      */
     protected boolean isValidFragment(String fragmentName) {
         return PreferenceFragment.class.getName().equals(fragmentName)
+                || SettingsPreferenceFragment.class.getName().equals((fragmentName))
                 || GeneralPreferenceFragment.class.getName().equals(fragmentName)
                 || DataSyncPreferenceFragment.class.getName().equals(fragmentName)
                 || NotificationPreferenceFragment.class.getName().equals(fragmentName);
@@ -255,6 +258,62 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
             // updated to reflect the new value, per the Android Design
             // guidelines.
             bindPreferenceSummaryToValue(findPreference("sync_frequency"));
+        }
+
+        @Override
+        public boolean onOptionsItemSelected(MenuItem item) {
+            int id = item.getItemId();
+            if (id == android.R.id.home) {
+                startActivity(new Intent(getActivity(), SettingsActivity.class));
+                return true;
+            }
+            return super.onOptionsItemSelected(item);
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
+    public static class SettingsPreferenceFragment extends PreferenceFragment {
+        @Override
+        public void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+            addPreferencesFromResource(R.xml.pref_settings);
+            setHasOptionsMenu(true);
+
+            EditTextPreference edtprefIP = (EditTextPreference) findPreference("ip_text");
+
+            // Bind the summaries of EditText/List/Dialog/Ringtone preferences
+            // to their values. When their values change, their summaries are
+            // updated to reflect the new value, per the Android Design
+            // guidelines.
+            bindPreferenceSummaryToValue(findPreference("ip_text"));
+
+            InputFilter[] filters = new InputFilter[1];
+            filters[0] = new InputFilter() {
+                @Override
+                public CharSequence filter(CharSequence source, int start, int end,
+                                           android.text.Spanned dest, int dstart, int dend) {
+                    if (end > start) {
+                        String destTxt = dest.toString();
+                        String resultingTxt = destTxt.substring(0, dstart)
+                                + source.subSequence(start, end)
+                                + destTxt.substring(dend);
+                        if (!resultingTxt
+                                .matches("^\\d{1,3}(\\.(\\d{1,3}(\\.(\\d{1,3}(\\.(\\d{1,3})?)?)?)?)?)?")) {
+                            return "";
+                        } else {
+                            String[] splits = resultingTxt.split("\\.");
+                            for (String split : splits) {
+                                if (Integer.valueOf(split) > 255) {
+                                    return "";
+                                }
+                            }
+                        }
+                    }
+                    return null;
+                }
+
+            };
+            edtprefIP.getEditText().setFilters(filters);
         }
 
         @Override
