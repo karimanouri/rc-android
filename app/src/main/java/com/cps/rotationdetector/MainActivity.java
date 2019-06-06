@@ -14,20 +14,29 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, RotationAngleDetector.RotationAngleListener {
 
+    public enum Mode{
+        STOP, MOVE, REVERSE_MOVE, GO_STRAIGHT, GO_BACK, TURN_RIGHT, TURN_LEFT
+    }
 
     private TextView txtAngle, txtZ, txtSpeed;
     private LinearLayout linearLayoutAngle, linearLayoutZ;
 
     private DatagramSocket socket;
-
-    Intent startSettingsActivity;
-    SharedPreferences preferences;
+    private Intent startSettingsActivity;
+    private SharedPreferences preferences;
+    private InetAddress address;
+    private byte[] lastPacket;
 
     private int speed = 1;
 
@@ -40,6 +49,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initRotationSensor();
         initStartSettingsIntent();
         initSocket();
+        initAddress();
+        lastPacket = makePacket(90, 1, Mode.MOVE);
     }
 
     @Override
@@ -58,6 +69,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onResume() {
         debugMode(preferences.getBoolean(getString(R.string.preference_key_debug), false));
+        initAddress();
         super.onResume();
     }
 
@@ -88,16 +100,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onRotation(float angleInAxisX, float angleInAxisY, float angleInAxisZ) {
         txtAngle.setText(String.valueOf(convertToAngle(angleInAxisY)));
         txtZ.setText(String.valueOf(angleInAxisZ));
-        new UdpSend(socket, preferences.getString(getString(R.string.preference_key_ip), getString(R.string.default_ip))).execute(convertToAngle(angleInAxisY), speed);
-    }
-
-    private int convertToAngle(float y) {
-        int angle = 90 + (int) y;
-        if(angle > 180)
-            angle = 180;
-        else if(angle < 0)
-            angle = 0;
-        return angle;
+        byte[] packet = makePacket(convertToAngle(angleInAxisY), speed, Mode.MOVE);
+        if(!Arrays.equals(packet, lastPacket)) {
+            lastPacket = packet;
+            new UdpSend(this, socket).execute(makeDatagram(packet));
+        }
     }
 
     private void initUiComponent() {
@@ -136,5 +143,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void debugMode(boolean isDebug) {
         linearLayoutAngle.setVisibility(isDebug ? View.VISIBLE : View.GONE);
         linearLayoutZ.setVisibility(isDebug ? View.VISIBLE : View.GONE);
+    }
+
+    private byte[] makePacket(int angle, int speed, Mode mode) {
+        byte[] return_value = new byte[2];
+        return_value[0] = (byte)(((speed - 1) << 6) + ((angle / 3) & 0x3F));
+        return_value[1] = (byte)(mode.ordinal() << 5);
+        return return_value;
+    }
+
+    private int convertToAngle(float y) {
+        int angle = 90 + (int) y;
+        if(angle > 180)
+            angle = 180;
+        else if(angle < 0)
+            angle = 0;
+        return angle;
+    }
+
+    private DatagramPacket makeDatagram(byte[] packet) {
+        int SERVER_PORT = 4210;
+        return new DatagramPacket(packet, packet.length, address, SERVER_PORT);
+    }
+
+    private void initAddress() {
+        try {
+            address = InetAddress.getByName(preferences.getString(getString(R.string.preference_key_ip), getString(R.string.default_ip)));
+        } catch (UnknownHostException e) {
+            Log.e("MainActivity", e.getMessage());
+            Toast.makeText(this, R.string.unknown_ip, Toast.LENGTH_LONG).show();
+        }
     }
 }
