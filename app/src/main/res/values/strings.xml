@@ -16,8 +16,11 @@
     <string name="default_ip">192.168.43.22</string>
     <string name="preference_key_ip">ip_text</string>
     <string name="preference_key_debug">switch_debug</string>
+
+    <!--Strings related to errors-->
     <string name="sending_failed">Sending Failed</string>
     <string name="unknown_ip">Unknown IP</string>
+    <string name="receiver_failed">Receiver Failed!</string>
 
     <!-- Example General settings -->
     <string name="pref_header_general">General</string>

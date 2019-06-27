@@ -17,13 +17,14 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, RotationAngleDetector.RotationAngleListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, RotationAngleDetector.RotationAngleListener, Runnable {
 
     private static final int PORT = 4110;
     private TextView txtAngle, txtZ, txtSpeed;
@@ -34,7 +35,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private SharedPreferences preferences;
     private InetAddress address;
     private PacketMan packetMan;
-    private ResponseListener responseListener;
     private Handler handler;
 
     private int speed = 1;
@@ -46,9 +46,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         packetMan = new PacketMan();
-        responseListener = new ResponseListener(socket, packetMan);
         handler = new Handler();
-        new Thread(responseListener).start();
+        new Thread(this).start();
         initUiComponent();
         initRotationSensor();
         initStartSettingsIntent();
@@ -109,6 +108,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         send(packetMan.createPacket(speed, convertToAngle(angleY), PacketMode.MOVE));
     }
 
+    // listen for ack response
+    @Override
+    public void run() {
+        byte[] receive = new byte[100];
+        DatagramPacket dpPacket = new DatagramPacket(receive, receive.length);
+        byte[] ackPack = new byte[2];
+        boolean error = false;
+        while (!error) {
+            try {
+                socket.receive(dpPacket);
+            } catch (IOException e) {
+                error = true;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(MainActivity.this, R.string.receiver_failed, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+            ackPack[0] = receive[0];
+            ackPack[1] = receive[1];
+            packetMan.ackedPacket(ackPack);
+        }
+    }
+
     private void initUiComponent() {
         linearLayoutAngle = findViewById(R.id.line_angle);
         linearLayoutZ = findViewById(R.id.line_z);
@@ -162,7 +186,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void send(byte[] packet) {
         if(packet != null) {
-            new UdpSend(this, socket).execute(makeDatagram(packet));
+            new UdpSender(this, socket).execute(makeDatagram(packet));
             manageHandler();
             Log.v("MainActivity", Packet.byte_to_str(packet));
         }
@@ -182,7 +206,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             address = InetAddress.getByName(preferences.getString(getString(R.string.preference_key_ip), getString(R.string.default_ip)));
         } catch (UnknownHostException e) {
             Log.e("MainActivity", e.getMessage());
-            Toast.makeText(this, R.string.unknown_ip, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.unknown_ip, Toast.LENGTH_SHORT).show();
         }
     }
 }

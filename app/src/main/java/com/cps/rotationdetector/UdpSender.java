@@ -9,12 +9,12 @@ import java.lang.ref.WeakReference;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 
-class UdpSend extends AsyncTask<DatagramPacket, Void, Boolean> {
+class UdpSender extends AsyncTask<DatagramPacket, Void, Boolean> {
 
     private DatagramSocket socket;
     private WeakReference<MainActivity> mainActivity;
 
-    UdpSend(MainActivity activity, DatagramSocket socket) {
+    UdpSender(MainActivity activity, DatagramSocket socket) {
         this.mainActivity = new WeakReference<>(activity);
         this.socket = socket;
     }
@@ -24,7 +24,7 @@ class UdpSend extends AsyncTask<DatagramPacket, Void, Boolean> {
         try {
             socket.send(params[0]);
         } catch (IOException e) {
-            Log.e("UdpSend", e.getMessage());
+            Log.e("UdpSender", e.getMessage());
             return false;
         }
 
@@ -35,6 +35,6 @@ class UdpSend extends AsyncTask<DatagramPacket, Void, Boolean> {
     protected void onPostExecute(Boolean send) {
         super.onPostExecute(send);
         if(!send)
-            Toast.makeText(mainActivity.get(), mainActivity.get().getString(R.string.sending_failed), Toast.LENGTH_LONG).show();
+            Toast.makeText(mainActivity.get(), mainActivity.get().getString(R.string.sending_failed), Toast.LENGTH_SHORT).show();
     }
 }
