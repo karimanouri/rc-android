@@ -34,7 +34,7 @@ class UdpSender extends AsyncTask<DatagramPacket, Void, Boolean> {
     @Override
     protected void onPostExecute(Boolean send) {
         super.onPostExecute(send);
-        if(!send)
-            Toast.makeText(mainActivity.get(), mainActivity.get().getString(R.string.sending_failed), Toast.LENGTH_SHORT).show();
+//        if(!send)
+//            Toast.makeText(mainActivity.get(), mainActivity.get().getString(R.string.sending_failed), Toast.LENGTH_SHORT).show();
     }
 }

@@ -2,6 +2,7 @@ package com.cps.rotationdetector;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -11,6 +12,7 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -24,7 +26,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, RotationAngleDetector.RotationAngleListener, Runnable {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnTouchListener, RotationAngleDetector.RotationAngleListener, Runnable {
 
     private static final int PORT = 4110;
     private TextView txtAngle, txtZ, txtSpeed;
@@ -47,12 +49,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         packetMan = new PacketMan();
         handler = new Handler();
-        new Thread(this).start();
         initUiComponent();
         initRotationSensor();
         initStartSettingsIntent();
         initSocket();
         initAddress();
+        new Thread(this).start();
     }
 
     @Override
@@ -83,6 +85,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         socket.close();
     }
 
+    // speed buttons
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
@@ -98,6 +101,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
         }
         txtSpeed.setText(String.valueOf(speed));
+    }
+
+    // send STOP when released
+    @Override
+    public boolean onTouch(View view, MotionEvent motionEvent) {
+        switch (motionEvent.getAction()) {
+            case MotionEvent.ACTION_UP:
+                view.performClick();
+                send(packetMan.createPacket(speed, 0, PacketMode.STOP));
+                Log.v("MainActivity", "released!");
+                break;
+        }
+        return true;
     }
 
     @Override
@@ -133,6 +149,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void initUiComponent() {
         linearLayoutAngle = findViewById(R.id.line_angle);
         linearLayoutZ = findViewById(R.id.line_z);
@@ -145,6 +162,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Button btnMinusSpeed = findViewById(R.id.btn_minus);
         btnMinusSpeed.setOnClickListener(this);
         txtSpeed.setText(String.valueOf(speed));
+        LinearLayout layoutMain = findViewById(R.id.layout_secondary);
+        layoutMain.setOnTouchListener(this);
     }
 
     private void initStartSettingsIntent() {
