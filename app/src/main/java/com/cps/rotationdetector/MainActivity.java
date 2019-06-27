@@ -26,11 +26,13 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
+import static java.lang.Math.abs;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnTouchListener, RotationAngleDetector.RotationAngleListener, Runnable {
 
     private static final int PORT = 4110;
-    private TextView txtAngle, txtZ, txtSpeed;
-    private LinearLayout linearLayoutAngle, linearLayoutZ;
+    private TextView txtAngle, txtZ, txtSpeed, txtSpeedDebug;
+    private LinearLayout linearLayoutAngle, linearLayoutZ, linearLayoutSpeed;
 
     private DatagramSocket socket;
     private Intent startSettingsActivity;
@@ -39,8 +41,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private PacketMan packetMan;
     private Handler handler;
 
-    private int speed = 1;
-    private float angleY;
+    private int speedText = 1;
+    private float angleY, angleZ;
+    private boolean isButtonMode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +76,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onResume() {
         debugMode(preferences.getBoolean(getString(R.string.preference_key_debug), false));
+        isButtonMode = preferences.getBoolean(getString(R.string.preference_key_control), true);
+        buttonMode(isButtonMode);
         initAddress();
         super.onResume();
     }
@@ -90,17 +95,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.btn_plus:
-                speed = (speed < 4) ? speed + 1 : speed;
-                Log.v("SpeedListener", String.valueOf(speed));
-                send(packetMan.createPacket(speed, convertToAngle(angleY), PacketMode.MOVE));
+                speedText = (speedText < 4) ? speedText + 1 : speedText;
+                Log.v("SpeedListener", String.valueOf(speedText));
+                send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (angleZ <= 0) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
                 break;
             case R.id.btn_minus:
-                speed = (speed > 1) ? speed - 1 : speed;
-                Log.v("SpeedListener", String.valueOf(speed));
-                send(packetMan.createPacket(speed, convertToAngle(angleY), PacketMode.MOVE));
+                speedText = (speedText > 1) ? speedText - 1 : speedText;
+                Log.v("SpeedListener", String.valueOf(speedText));
+                send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (angleZ <= 0) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
                 break;
         }
-        txtSpeed.setText(String.valueOf(speed));
+        txtSpeed.setText(String.valueOf(speedText));
     }
 
     // send STOP when released
@@ -109,7 +114,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (motionEvent.getAction()) {
             case MotionEvent.ACTION_UP:
                 view.performClick();
-                send(packetMan.createPacket(speed, 0, PacketMode.STOP));
+                send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), 0, PacketMode.STOP));
                 Log.v("MainActivity", "released!");
                 break;
         }
@@ -119,9 +124,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onRotation(float angleInAxisX, float angleInAxisY, float angleInAxisZ) {
         angleY = angleInAxisY;
+        angleZ = angleInAxisZ;
         txtAngle.setText(String.valueOf(convertToAngle(angleY)));
         txtZ.setText(String.valueOf(angleInAxisZ));
-        send(packetMan.createPacket(speed, convertToAngle(angleY), PacketMode.MOVE));
+        txtSpeedDebug.setText(String.valueOf(angleToSpeed(angleZ)));
+        send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (angleZ <= 0) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
     }
 
     // listen for ack response
@@ -153,15 +160,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void initUiComponent() {
         linearLayoutAngle = findViewById(R.id.line_angle);
         linearLayoutZ = findViewById(R.id.line_z);
+        linearLayoutSpeed = findViewById(R.id.layout_control_speed);
         debugMode(preferences.getBoolean(getString(R.string.preference_key_debug), false));
+        isButtonMode = preferences.getBoolean(getString(R.string.preference_key_control), true);
+        buttonMode(isButtonMode);
         txtAngle = findViewById(R.id.txt_angle);
         txtZ = findViewById(R.id.txt_z);
         txtSpeed = findViewById(R.id.txt_speed);
+        txtSpeedDebug = findViewById(R.id.txt_speed_debug);
         Button btnPlusSpeed = findViewById(R.id.btn_plus);
         btnPlusSpeed.setOnClickListener(this);
         Button btnMinusSpeed = findViewById(R.id.btn_minus);
         btnMinusSpeed.setOnClickListener(this);
-        txtSpeed.setText(String.valueOf(speed));
+        txtSpeed.setText(String.valueOf(speedText));
         LinearLayout layoutMain = findViewById(R.id.layout_secondary);
         layoutMain.setOnTouchListener(this);
     }
@@ -190,6 +201,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         linearLayoutZ.setVisibility(isDebug ? View.VISIBLE : View.GONE);
     }
 
+    private void buttonMode(boolean isButtonMode) {
+        linearLayoutSpeed.setVisibility(isButtonMode ? View.VISIBLE : View.GONE);
+    }
+
     private int convertToAngle(float y) {
         int angle = 90 + (int) y;
         if(angle > 180)
@@ -197,6 +212,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         else if(angle < 0)
             angle = 0;
         return angle;
+    }
+
+    private int angleToSpeed(float z) {
+        return ((int) abs(z)) / 30 + 1;
     }
 
     private DatagramPacket makeDatagram(byte[] packet) {
@@ -224,6 +243,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         try {
             address = InetAddress.getByName(preferences.getString(getString(R.string.preference_key_ip), getString(R.string.default_ip)));
         } catch (UnknownHostException e) {
+            // TODO handle error
             Log.e("MainActivity", e.getMessage());
             Toast.makeText(this, R.string.unknown_ip, Toast.LENGTH_SHORT).show();
         }
