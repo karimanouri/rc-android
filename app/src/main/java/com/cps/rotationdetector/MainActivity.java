@@ -5,7 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.CountDownTimer;
+import android.os.Handler;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -35,6 +35,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private InetAddress address;
     private PacketMan packetMan;
     private ResponseListener responseListener;
+    private Handler handler;
 
     private int speed = 1;
     private float angleY;
@@ -46,25 +47,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         packetMan = new PacketMan();
         responseListener = new ResponseListener(socket, packetMan);
+        handler = new Handler();
         new Thread(responseListener).start();
         initUiComponent();
         initRotationSensor();
         initStartSettingsIntent();
         initSocket();
         initAddress();
-//        new CountDownTimer(3000, 1) {
-//            @Override
-//            public void onTick(long l) {
-//                byte[] packet = packetMan.intervalRun();
-//                if(packet != null)
-//                    new UdpSend(this, socket).execute(makeDatagram(packet));
-//            }
-//
-//            @Override
-//            public void onFinish() {
-//                this.start();
-//            }
-//        }.start();
     }
 
     @Override
@@ -101,12 +90,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btn_plus:
                 speed = (speed < 4) ? speed + 1 : speed;
                 Log.v("SpeedListener", String.valueOf(speed));
-                send();
+                send(packetMan.createPacket(speed, convertToAngle(angleY), PacketMode.MOVE));
                 break;
             case R.id.btn_minus:
                 speed = (speed > 1) ? speed - 1 : speed;
                 Log.v("SpeedListener", String.valueOf(speed));
-                send();
+                send(packetMan.createPacket(speed, convertToAngle(angleY), PacketMode.MOVE));
                 break;
         }
         txtSpeed.setText(String.valueOf(speed));
@@ -117,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         angleY = angleInAxisY;
         txtAngle.setText(String.valueOf(convertToAngle(angleY)));
         txtZ.setText(String.valueOf(angleInAxisZ));
-        send();
+        send(packetMan.createPacket(speed, convertToAngle(angleY), PacketMode.MOVE));
     }
 
     private void initUiComponent() {
@@ -171,12 +160,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return new DatagramPacket(packet, packet.length, address, 4210);
     }
 
-    private void send() {
-        byte[] packet = packetMan.createPacket(speed, convertToAngle(angleY), PacketMode.MOVE);
+    private void send(byte[] packet) {
         if(packet != null) {
             new UdpSend(this, socket).execute(makeDatagram(packet));
+            manageHandler();
             Log.v("MainActivity", Packet.byte_to_str(packet));
         }
+    }
+    private void manageHandler() {
+        handler.removeCallbacksAndMessages(null);
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                send(packetMan.intervalRun());
+            }
+        }, 5);
     }
 
     private void initAddress() {

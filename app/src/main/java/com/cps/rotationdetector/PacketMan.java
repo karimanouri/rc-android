@@ -4,7 +4,6 @@ import android.util.Log;
 
 class PacketMan{
     private Packet lastPack = null;
-    private Packet curPack  = null;
     private int lastAckSeq;
     private int seqNumber = 0;
 
@@ -13,7 +12,7 @@ class PacketMan{
         speed = Math.min(speed,4);
         angle = Math.max(angle,0);
         angle = Math.min(angle,180);
-        curPack = new Packet(speed,angle,mode,seqNumber);
+        Packet curPack = new Packet(speed, angle, mode, seqNumber);
         if(lastPack != null){
             if(curPack.equals(lastPack)){
                 return null;
@@ -29,8 +28,8 @@ class PacketMan{
         Log.v("PacketMan", "acked: " + lastAckSeq);
     }
     byte[] intervalRun(){
-        if (lastAckSeq != lastPack.seqNumber)
-            if (System.currentTimeMillis() - lastPack.timeStamp > 5)
+        if (lastAckSeq != lastPack.getSeqNumber())
+            if (System.currentTimeMillis() - lastPack.getTimeStamp() > 5)
                 return lastPack.getBytes();
         return null;
     }
