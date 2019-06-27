@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -21,14 +22,10 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, RotationAngleDetector.RotationAngleListener {
 
-    public enum Mode{
-        STOP, MOVE, REVERSE_MOVE, GO_STRAIGHT, GO_BACK, TURN_RIGHT, TURN_LEFT
-    }
-
+    private static final int PORT = 4110;
     private TextView txtAngle, txtZ, txtSpeed;
     private LinearLayout linearLayoutAngle, linearLayoutZ;
 
@@ -36,21 +33,38 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Intent startSettingsActivity;
     private SharedPreferences preferences;
     private InetAddress address;
-    private byte[] lastPacket;
+    private PacketMan packetMan;
+    private ResponseListener responseListener;
 
     private int speed = 1;
+    private float angleY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        packetMan = new PacketMan();
+        responseListener = new ResponseListener(socket, packetMan);
+        new Thread(responseListener).start();
         initUiComponent();
         initRotationSensor();
         initStartSettingsIntent();
         initSocket();
         initAddress();
-        lastPacket = makePacket(90, 1, Mode.MOVE);
+//        new CountDownTimer(3000, 1) {
+//            @Override
+//            public void onTick(long l) {
+//                byte[] packet = packetMan.intervalRun();
+//                if(packet != null)
+//                    new UdpSend(this, socket).execute(makeDatagram(packet));
+//            }
+//
+//            @Override
+//            public void onFinish() {
+//                this.start();
+//            }
+//        }.start();
     }
 
     @Override
@@ -87,10 +101,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btn_plus:
                 speed = (speed < 4) ? speed + 1 : speed;
                 Log.v("SpeedListener", String.valueOf(speed));
+                send();
                 break;
             case R.id.btn_minus:
                 speed = (speed > 1) ? speed - 1 : speed;
                 Log.v("SpeedListener", String.valueOf(speed));
+                send();
                 break;
         }
         txtSpeed.setText(String.valueOf(speed));
@@ -98,13 +114,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onRotation(float angleInAxisX, float angleInAxisY, float angleInAxisZ) {
-        txtAngle.setText(String.valueOf(convertToAngle(angleInAxisY)));
+        angleY = angleInAxisY;
+        txtAngle.setText(String.valueOf(convertToAngle(angleY)));
         txtZ.setText(String.valueOf(angleInAxisZ));
-        byte[] packet = makePacket(convertToAngle(angleInAxisY), speed, Mode.MOVE);
-        if(!Arrays.equals(packet, lastPacket)) {
-            lastPacket = packet;
-            new UdpSend(this, socket).execute(makeDatagram(packet));
-        }
+        send();
     }
 
     private void initUiComponent() {
@@ -129,7 +142,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void initSocket() {
         try {
-            socket = new DatagramSocket();
+            socket = new DatagramSocket(PORT);
         } catch (SocketException e) {
             e.printStackTrace();
         }
@@ -145,13 +158,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         linearLayoutZ.setVisibility(isDebug ? View.VISIBLE : View.GONE);
     }
 
-    private byte[] makePacket(int angle, int speed, Mode mode) {
-        byte[] return_value = new byte[2];
-        return_value[0] = (byte)(((speed - 1) << 6) + ((angle / 3) & 0x3F));
-        return_value[1] = (byte)(mode.ordinal() << 5);
-        return return_value;
-    }
-
     private int convertToAngle(float y) {
         int angle = 90 + (int) y;
         if(angle > 180)
@@ -162,8 +168,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private DatagramPacket makeDatagram(byte[] packet) {
-        int SERVER_PORT = 4210;
-        return new DatagramPacket(packet, packet.length, address, SERVER_PORT);
+        return new DatagramPacket(packet, packet.length, address, 4210);
+    }
+
+    private void send() {
+        byte[] packet = packetMan.createPacket(speed, convertToAngle(angleY), PacketMode.MOVE);
+        if(packet != null) {
+            new UdpSend(this, socket).execute(makeDatagram(packet));
+            Log.v("MainActivity", Packet.byte_to_str(packet));
+        }
     }
 
     private void initAddress() {
