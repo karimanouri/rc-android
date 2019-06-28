@@ -18,6 +18,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -26,13 +27,12 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
-import static java.lang.Math.abs;
-
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnTouchListener, RotationAngleDetector.RotationAngleListener, Runnable {
 
     private static final int PORT = 4110;
-    private TextView txtAngle, txtZ, txtSpeed, txtSpeedDebug;
-    private LinearLayout linearLayoutAngle, linearLayoutZ, linearLayoutSpeed;
+    private TextView txtAngleDebug, txtZDebug, txtSpeed, txtSpeedDebug, txtLastPacketDebug, txtAckDebug;
+    private LinearLayout linearLayoutAngle, linearLayoutZ, linearLayoutSpeed, linearLayoutLastPacket, linearLayoutACK;
+    Button btnPlusSpeed, btnMinusSpeed;
 
     private DatagramSocket socket;
     private Intent startSettingsActivity;
@@ -44,11 +44,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private int speedText = 1;
     private float angleY, angleZ;
     private boolean isButtonMode;
+    private boolean isForward, move;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        isForward = true;
+        move = false;
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         packetMan = new PacketMan();
         handler = new Handler();
@@ -97,12 +100,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btn_plus:
                 speedText = (speedText < 4) ? speedText + 1 : speedText;
                 Log.v("SpeedListener", String.valueOf(speedText));
-                send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (angleZ <= 0) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
+                if(move)
+                    send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
                 break;
             case R.id.btn_minus:
                 speedText = (speedText > 1) ? speedText - 1 : speedText;
                 Log.v("SpeedListener", String.valueOf(speedText));
-                send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (angleZ <= 0) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
+                if(move)
+                    send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
+                break;
+            case R.id.btn_reverse:
+                isForward = !isForward;
+                Log.v("MainActivity", isForward ? "FORWARD" : "BACKWARD");
                 break;
         }
         txtSpeed.setText(String.valueOf(speedText));
@@ -116,7 +125,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 view.performClick();
                 send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), 0, PacketMode.STOP));
                 Log.v("MainActivity", "released!");
+                move = false;
+                Log.v("MainActivity", "moving stopped");
                 break;
+
+            case MotionEvent.ACTION_DOWN:
+                view.performClick();
+                send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
+                move = true;
+                Log.v("MainActivity", "moving started");
+                break;
+
         }
         return true;
     }
@@ -125,10 +144,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onRotation(float angleInAxisX, float angleInAxisY, float angleInAxisZ) {
         angleY = angleInAxisY;
         angleZ = angleInAxisZ;
-        txtAngle.setText(String.valueOf(convertToAngle(angleY)));
-        txtZ.setText(String.valueOf(angleInAxisZ));
+        txtAngleDebug.setText(String.valueOf(convertToAngle(angleY)));
+        txtZDebug.setText(String.valueOf(angleInAxisZ));
         txtSpeedDebug.setText(String.valueOf(angleToSpeed(angleZ)));
-        send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (angleZ <= 0) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
+        if(move)
+            send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
     }
 
     // listen for ack response
@@ -143,6 +163,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 socket.receive(dpPacket);
             } catch (IOException e) {
                 error = true;
+                // TODO handle error
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -152,7 +173,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             ackPack[0] = receive[0];
             ackPack[1] = receive[1];
-            packetMan.ackedPacket(ackPack);
+            final int seq = packetMan.ackedPacket(ackPack);
+            Log.v("MainActivity", "receive ack: " + Packet.byte_to_str(ackPack));
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    txtAckDebug.setText(String.valueOf(seq));
+                }
+            });
         }
     }
 
@@ -160,21 +188,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void initUiComponent() {
         linearLayoutAngle = findViewById(R.id.line_angle);
         linearLayoutZ = findViewById(R.id.line_z);
-        linearLayoutSpeed = findViewById(R.id.layout_control_speed);
-        debugMode(preferences.getBoolean(getString(R.string.preference_key_debug), false));
+        linearLayoutSpeed = findViewById(R.id.line_speed);
+        linearLayoutLastPacket = findViewById(R.id.line_last_packet);
+        linearLayoutACK = findViewById(R.id.line_ack);
         isButtonMode = preferences.getBoolean(getString(R.string.preference_key_control), true);
-        buttonMode(isButtonMode);
-        txtAngle = findViewById(R.id.txt_angle);
-        txtZ = findViewById(R.id.txt_z);
+        txtAngleDebug = findViewById(R.id.txt_angle);
+        txtLastPacketDebug = findViewById(R.id.txt_last_packet);
+        txtZDebug = findViewById(R.id.txt_z);
         txtSpeed = findViewById(R.id.txt_speed);
         txtSpeedDebug = findViewById(R.id.txt_speed_debug);
-        Button btnPlusSpeed = findViewById(R.id.btn_plus);
+        txtAckDebug = findViewById(R.id.txt_ack);
+        btnPlusSpeed = findViewById(R.id.btn_plus);
         btnPlusSpeed.setOnClickListener(this);
-        Button btnMinusSpeed = findViewById(R.id.btn_minus);
+        btnMinusSpeed = findViewById(R.id.btn_minus);
         btnMinusSpeed.setOnClickListener(this);
+        ToggleButton btnReverse = findViewById(R.id.btn_reverse);
+        btnReverse.setOnClickListener(this);
         txtSpeed.setText(String.valueOf(speedText));
         LinearLayout layoutMain = findViewById(R.id.layout_secondary);
         layoutMain.setOnTouchListener(this);
+        debugMode(preferences.getBoolean(getString(R.string.preference_key_debug), false));
+        buttonMode(isButtonMode);
     }
 
     private void initStartSettingsIntent() {
@@ -199,10 +233,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void debugMode(boolean isDebug) {
         linearLayoutAngle.setVisibility(isDebug ? View.VISIBLE : View.GONE);
         linearLayoutZ.setVisibility(isDebug ? View.VISIBLE : View.GONE);
+        linearLayoutSpeed.setVisibility(isDebug ? View.VISIBLE : View.GONE);
+        linearLayoutLastPacket.setVisibility(isDebug ? View.VISIBLE : View.GONE);
+        linearLayoutAngle.setVisibility(isDebug ? View.VISIBLE : View.GONE);
+        linearLayoutACK.setVisibility(isDebug ? View.VISIBLE : View.GONE);
     }
 
     private void buttonMode(boolean isButtonMode) {
-        linearLayoutSpeed.setVisibility(isButtonMode ? View.VISIBLE : View.GONE);
+        btnPlusSpeed.setVisibility(isButtonMode ? View.VISIBLE : View.GONE);
+        btnMinusSpeed.setVisibility(isButtonMode ? View.VISIBLE : View.GONE);
+        txtSpeed.setVisibility(isButtonMode ? View.VISIBLE : View.GONE);
     }
 
     private int convertToAngle(float y) {
@@ -215,7 +255,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private int angleToSpeed(float z) {
-        return ((int) abs(z)) / 30 + 1;
+        if(z >= 45)
+            return 1;
+        else if(z < 45 && z > 30)
+            return 2;
+        else if(z < 30 && z > 15)
+            return 3;
+        else
+            return 4;
     }
 
     private DatagramPacket makeDatagram(byte[] packet) {
@@ -224,19 +271,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void send(byte[] packet) {
         if(packet != null) {
+            txtLastPacketDebug.setText(Packet.byte_to_str(packet));
             new UdpSender(this, socket).execute(makeDatagram(packet));
             manageHandler();
             Log.v("MainActivity", Packet.byte_to_str(packet));
         }
     }
+
+    // resend
     private void manageHandler() {
         handler.removeCallbacksAndMessages(null);
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
+                Log.v("MainActivity", "RESEND!");
                 send(packetMan.intervalRun());
             }
-        }, 5);
+        }, 200 );
     }
 
     private void initAddress() {
@@ -247,5 +298,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.e("MainActivity", e.getMessage());
             Toast.makeText(this, R.string.unknown_ip, Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void restart() {
+        finish();
+        startActivity(getIntent());
     }
 }

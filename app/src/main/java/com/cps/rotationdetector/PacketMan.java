@@ -22,10 +22,11 @@ class PacketMan{
         seqNumber++;
         return curPack.getBytes();
     }
-    void ackedPacket(byte[] ackPacket){
+    int ackedPacket(byte[] ackPacket){
         lastAckSeq = ackPacket[0] & 0xFF;
         lastAckSeq = lastAckSeq*2 + ((ackPacket[1]>>7)&0x01);
         Log.v("PacketMan", "acked: " + lastAckSeq);
+        return lastAckSeq;
     }
     byte[] intervalRun(){
         if (lastAckSeq != lastPack.getSeqNumber())

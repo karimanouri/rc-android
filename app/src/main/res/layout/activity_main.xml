@@ -16,6 +16,7 @@
         android:layout_marginBottom="20dp"
         android:orientation="vertical">
         <ToggleButton
+            android:id="@+id/btn_reverse"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:textOn="@string/backward"
@@ -25,8 +26,8 @@
             android:id="@+id/btn_plus"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_weight="5"
-            android:textSize="40sp"
+            android:layout_weight="6"
+            android:textSize="20sp"
             android:text="@string/plus" />
         <TextView
             android:id="@+id/txt_speed"
@@ -40,7 +41,7 @@
             android:id="@+id/btn_minus"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_weight="5"
+            android:layout_weight="6"
             android:textSize="40sp"
             android:text="@string/minus"/>
     </LinearLayout>
@@ -113,6 +114,50 @@
 
             <TextView
                 android:id="@+id/txt_speed_debug"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <LinearLayout
+        android:id="@+id/line_last_packet"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:layout_weight="0"
+            android:labelFor="@+id/txt_last_packet"
+            android:text="@string/last_packet" />
+
+        <TextView
+            android:id="@+id/txt_last_packet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/line_ack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:layout_weight="0"
+                android:labelFor="@+id/txt_ack"
+                android:text="@string/ack" />
+
+            <TextView
+                android:id="@+id/txt_ack"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1" />

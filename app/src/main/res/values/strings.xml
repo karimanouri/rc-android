@@ -5,8 +5,6 @@
     <string name="plus">+</string>
     <string name="minus">-</string>
 
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="title_activity_settings">Settings</string>
 
     <!-- Strings related to Settings -->
@@ -23,6 +21,8 @@
     <string name="unknown_ip">Unknown IP</string>
     <string name="receiver_failed">Receiver Failed!</string>
     <string name="speed">Speed:</string>
-    <string name="backward">BACKWARD</string>
-    <string name="forward">FORWARD</string>
+    <string name="backward">R</string>
+    <string name="forward">D</string>
+    <string name="last_packet">Last Packet: </string>
+    <string name="ack">ACK: </string>
 </resources>
