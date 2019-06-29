@@ -1,7 +1,5 @@
 package com.cps.rotationdetector;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -17,8 +15,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.ToggleButton;
+
+import com.google.android.material.snackbar.Snackbar;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -27,12 +26,15 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnTouchListener, RotationAngleDetector.RotationAngleListener, Runnable {
 
     private static final int PORT = 4110;
     private TextView txtAngleDebug, txtZDebug, txtSpeed, txtSpeedDebug, txtLastPacketDebug, txtAckDebug;
-    private LinearLayout linearLayoutAngle, linearLayoutZ, linearLayoutSpeed, linearLayoutLastPacket, linearLayoutACK;
+    private LinearLayout linearLayoutAngle, linearLayoutZ, linearLayoutSpeed, linearLayoutLastPacket, linearLayoutACK, linearLayoutMain;
     Button btnPlusSpeed, btnMinusSpeed;
+    private Snackbar snackError;
 
     private DatagramSocket socket;
     private Intent startSettingsActivity;
@@ -61,6 +63,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initSocket();
         initAddress();
         new Thread(this).start();
+        // TODO ping device
     }
 
     @Override
@@ -163,11 +166,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 socket.receive(dpPacket);
             } catch (IOException e) {
                 error = true;
-                // TODO handle error
+                final String errorMessage = e.getMessage();
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(MainActivity.this, R.string.receiver_failed, Toast.LENGTH_SHORT).show();
+                        handleError("MainActivity", errorMessage);
                     }
                 });
             }
@@ -186,6 +189,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @SuppressLint("ClickableViewAccessibility")
     private void initUiComponent() {
+        snackError = Snackbar.make(findViewById(R.id.main_parent), getString(R.string.couldnt_connect), Snackbar.LENGTH_INDEFINITE)
+            .setAction(getString(R.string.try_again), new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    restart();
+                }
+            });
+        linearLayoutMain = findViewById(R.id.line_main);
         linearLayoutAngle = findViewById(R.id.line_angle);
         linearLayoutZ = findViewById(R.id.line_z);
         linearLayoutSpeed = findViewById(R.id.line_speed);
@@ -221,7 +232,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         try {
             socket = new DatagramSocket(PORT);
         } catch (SocketException e) {
-            e.printStackTrace();
+            handleError("MainActivity", e.getMessage());
         }
     }
 
@@ -294,14 +305,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         try {
             address = InetAddress.getByName(preferences.getString(getString(R.string.preference_key_ip), getString(R.string.default_ip)));
         } catch (UnknownHostException e) {
-            // TODO handle error
-            Log.e("MainActivity", e.getMessage());
-            Toast.makeText(this, R.string.unknown_ip, Toast.LENGTH_SHORT).show();
+            handleError("MainActivity", e.getMessage());
         }
+    }
+
+    public void handleError(String tag, String error) {
+        pause();
+        snackError.show();
+        Log.e(tag, error);
     }
 
     private void restart() {
         finish();
         startActivity(getIntent());
+    }
+
+    private void pause() {
+        linearLayoutMain.setVisibility(View.GONE);
     }
 }
