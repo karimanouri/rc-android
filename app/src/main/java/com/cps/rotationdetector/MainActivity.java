@@ -70,7 +70,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if(initSocket() && initAddress())
             new Thread(this).start();
         // TODO splash screen
-        // TODO launcher icon
     }
 
     @Override
