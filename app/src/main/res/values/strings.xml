@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Rotation Detector</string>
+    <string name="app_name">RC Controller</string>
     <string name="angle">Angle:</string>
     <string name="z">Z:</string>
     <string name="plus">+</string>
@@ -26,5 +26,5 @@
     <string name="last_packet">Last Packet: </string>
     <string name="ack">ACK: </string>
     <string name="try_again">Try Again!</string>
-    <string name="couldnt_connect">Couldn\'t Connect</string>
+    <string name="could_not_connect">Could not Connect</string>
 </resources>

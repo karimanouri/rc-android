@@ -197,7 +197,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @SuppressLint("ClickableViewAccessibility")
     private void initUiComponent() {
         coordinatorLayout = findViewById(R.id.main_parent);
-        snackError = Snackbar.make(coordinatorLayout, getString(R.string.couldnt_connect), Snackbar.LENGTH_INDEFINITE)
+        snackError = Snackbar.make(coordinatorLayout, getString(R.string.could_not_connect), Snackbar.LENGTH_INDEFINITE)
             .setAction(getString(R.string.try_again), new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
