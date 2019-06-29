@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initSocket();
         initAddress();
         new Thread(this).start();
-        // TODO ping device
+        // TODO correct null socket
     }
 
     @Override
@@ -93,7 +93,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onDestroy();
         Sensey.getInstance().stopRotationAngleDetection(this);
         Sensey.getInstance().stop();
-        socket.close();
+        if(socket != null)
+            socket.close();
     }
 
     // speed buttons
@@ -160,20 +161,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         byte[] receive = new byte[100];
         DatagramPacket dpPacket = new DatagramPacket(receive, receive.length);
         byte[] ackPack = new byte[2];
-        boolean error = false;
-        while (!error) {
-            try {
-                socket.receive(dpPacket);
-            } catch (IOException e) {
-                error = true;
-                final String errorMessage = e.getMessage();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        handleError("MainActivity", errorMessage);
-                    }
-                });
-            }
+        while (true) {
+            if(socket != null) {
+                try {
+                    socket.receive(dpPacket);
+                } catch (IOException e) {
+                    final String errorMessage = e.getMessage();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            handleError("MainActivity", errorMessage);
+                        }
+                    });
+                    break;
+                }
+
+            } else handleError("MainActivity", "null socket");
             ackPack[0] = receive[0];
             ackPack[1] = receive[1];
             final int seq = packetMan.ackedPacket(ackPack);
@@ -304,6 +307,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void initAddress() {
         try {
             address = InetAddress.getByName(preferences.getString(getString(R.string.preference_key_ip), getString(R.string.default_ip)));
+            new Ping(this, address).execute(500);
         } catch (UnknownHostException e) {
             handleError("MainActivity", e.getMessage());
         }
@@ -311,7 +315,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     public void handleError(String tag, String error) {
         pause();
-        snackError.show();
+        if(!snackError.isShown())
+            snackError.show();
         Log.e(tag, error);
     }
 
