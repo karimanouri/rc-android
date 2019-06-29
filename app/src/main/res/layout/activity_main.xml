@@ -24,20 +24,18 @@
             android:orientation="vertical">
             <ToggleButton
                 android:id="@+id/btn_reverse"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
                 android:textOn="@string/backward"
                 android:textOff="@string/forward"
-                android:layout_weight="6"
                 android:background="@drawable/circle"
                 android:textColor="@android:color/white"
                 android:textSize="20sp"
                 android:layout_margin="5dp"/>
             <Button
                 android:id="@+id/btn_plus"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_weight="6"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
                 android:textSize="20sp"
                 android:text="@string/plus"
                 android:background="@drawable/circle"
@@ -46,17 +44,15 @@
             <TextView
                 android:id="@+id/txt_speed"
                 android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_weight="7"
+                android:layout_height="50dp"
+                android:paddingTop="5dp"
                 android:layout_gravity="center"
-                android:textSize="25sp"
-                android:layout_margin="5dp"/>
+                android:textSize="25sp" />
             <Button
                 android:id="@+id/btn_minus"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_weight="6"
-                android:textSize="40sp"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:textSize="20sp"
                 android:text="@string/minus"
                 android:background="@drawable/circle"
                 android:textColor="@android:color/white"

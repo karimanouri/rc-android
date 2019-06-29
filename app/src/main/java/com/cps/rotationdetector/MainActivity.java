@@ -69,6 +69,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initStartSettingsIntent();
         if(initSocket() && initAddress())
             new Thread(this).start();
+        // TODO splash screen
+        // TODO launcher icon
     }
 
     @Override
