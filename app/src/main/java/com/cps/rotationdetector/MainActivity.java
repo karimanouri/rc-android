@@ -30,7 +30,7 @@ import java.net.UnknownHostException;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 
-import static java.lang.Math.abs;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnTouchListener, RotationAngleDetector.RotationAngleListener, Runnable {
@@ -286,10 +286,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private int angleToColor(int angleY) {
         int red, green, blue;
-        red   = (int)(1.4*angleY);
-        green = 150 + (int)(1.2*(90 - abs(90 - angleY)));
-        green = min(green, 255);
-        blue  = 255 - red;
+        if(angleY > 90){
+            angleY = angleY - 90;
+            red    = 187 + (int)(0.75*angleY);
+            green  = 134 + (int)(1.4*angleY);
+            blue   = 252 - (int)(2.8*angleY);
+        }else{
+            angleY = 90 - angleY;
+            red    = 187 - 2*angleY;
+            green  = 134 + (int)(1.4*angleY);
+            blue   = 252;
+        }
+        red   = max(0, red);
+        green = max(0, green);
+        blue  = max(0, blue);
+        red   = min(255, red);
+        green = min(255, green);
+        blue  = min(255, blue);
         return Color.rgb(red, green, blue);
     }
 
