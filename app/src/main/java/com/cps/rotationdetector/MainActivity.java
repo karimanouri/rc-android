@@ -3,6 +3,7 @@ package com.cps.rotationdetector;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceActivity;
@@ -27,14 +28,19 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
+
+import static java.lang.Math.abs;
+import static java.lang.Math.min;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnTouchListener, RotationAngleDetector.RotationAngleListener, Runnable {
 
     private static final int PORT = 4110;
     private TextView txtAngleDebug, txtZDebug, txtSpeed, txtSpeedDebug, txtLastPacketDebug, txtAckDebug;
     private LinearLayout linearLayoutAngle, linearLayoutZ, linearLayoutSpeed, linearLayoutLastPacket, linearLayoutACK, linearLayoutMain;
-    Button btnPlusSpeed, btnMinusSpeed;
+    private Button btnPlusSpeed, btnMinusSpeed;
     private Snackbar snackError;
+    private CoordinatorLayout coordinatorLayout;
 
     private DatagramSocket socket;
     private Intent startSettingsActivity;
@@ -44,7 +50,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Handler handler;
 
     private int speedText = 1;
-    private float angleY, angleZ;
+    private float angleZ;
+    private int angleY;
     private boolean isButtonMode;
     private boolean isForward, move;
 
@@ -60,10 +67,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initUiComponent();
         initRotationSensor();
         initStartSettingsIntent();
-        initSocket();
-        initAddress();
-        new Thread(this).start();
-        // TODO correct null socket
+        if(initSocket() && initAddress())
+            new Thread(this).start();
     }
 
     @Override
@@ -93,8 +98,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onDestroy();
         Sensey.getInstance().stopRotationAngleDetection(this);
         Sensey.getInstance().stop();
-        if(socket != null)
-            socket.close();
+        socket.close();
     }
 
     // speed buttons
@@ -105,13 +109,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 speedText = (speedText < 4) ? speedText + 1 : speedText;
                 Log.v("SpeedListener", String.valueOf(speedText));
                 if(move)
-                    send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
+                    send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), angleY, (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
                 break;
             case R.id.btn_minus:
                 speedText = (speedText > 1) ? speedText - 1 : speedText;
                 Log.v("SpeedListener", String.valueOf(speedText));
                 if(move)
-                    send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
+                    send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), angleY, (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
                 break;
             case R.id.btn_reverse:
                 isForward = !isForward;
@@ -135,7 +139,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             case MotionEvent.ACTION_DOWN:
                 view.performClick();
-                send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
+                send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), angleY, (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
                 move = true;
                 Log.v("MainActivity", "moving started");
                 break;
@@ -146,13 +150,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onRotation(float angleInAxisX, float angleInAxisY, float angleInAxisZ) {
-        angleY = angleInAxisY;
+        angleY = convertToAngle(angleInAxisY);
         angleZ = angleInAxisZ;
-        txtAngleDebug.setText(String.valueOf(convertToAngle(angleY)));
+        coordinatorLayout.setBackgroundColor(angleToColor(angleY));
+        txtAngleDebug.setText(String.valueOf(angleY));
         txtZDebug.setText(String.valueOf(angleInAxisZ));
         txtSpeedDebug.setText(String.valueOf(angleToSpeed(angleZ)));
         if(move)
-            send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), convertToAngle(angleY), (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
+            send(packetMan.createPacket(isButtonMode ? speedText : angleToSpeed(angleZ), angleY, (isForward) ? PacketMode.MOVE : PacketMode.REVERSE_MOVE));
     }
 
     // listen for ack response
@@ -162,21 +167,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         DatagramPacket dpPacket = new DatagramPacket(receive, receive.length);
         byte[] ackPack = new byte[2];
         while (true) {
-            if(socket != null) {
-                try {
-                    socket.receive(dpPacket);
-                } catch (IOException e) {
-                    final String errorMessage = e.getMessage();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            handleError("MainActivity", errorMessage);
-                        }
-                    });
-                    break;
-                }
-
-            } else handleError("MainActivity", "null socket");
+            try {
+                socket.receive(dpPacket);
+            } catch (IOException e) {
+                final String errorMessage = e.getMessage();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        handleError("MainActivity", errorMessage);
+                    }
+                });
+                break;
+            }
             ackPack[0] = receive[0];
             ackPack[1] = receive[1];
             final int seq = packetMan.ackedPacket(ackPack);
@@ -192,7 +194,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @SuppressLint("ClickableViewAccessibility")
     private void initUiComponent() {
-        snackError = Snackbar.make(findViewById(R.id.main_parent), getString(R.string.couldnt_connect), Snackbar.LENGTH_INDEFINITE)
+        coordinatorLayout = findViewById(R.id.main_parent);
+        snackError = Snackbar.make(coordinatorLayout, getString(R.string.couldnt_connect), Snackbar.LENGTH_INDEFINITE)
             .setAction(getString(R.string.try_again), new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -231,11 +234,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         startSettingsActivity.putExtra(PreferenceActivity.EXTRA_SHOW_FRAGMENT, SettingsActivity.SettingsPreferenceFragment.class.getName());
     }
 
-    private void initSocket() {
+    private boolean initSocket() {
         try {
             socket = new DatagramSocket(PORT);
+            return true;
         } catch (SocketException e) {
             handleError("MainActivity", e.getMessage());
+            return false;
         }
     }
 
@@ -279,6 +284,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             return 4;
     }
 
+    private int angleToColor(int angleY) {
+        int red, green, blue;
+        red   = (int)(1.4*angleY);
+        green = 150 + (int)(1.2*(90 - abs(90 - angleY)));
+        green = min(green, 255);
+        blue  = 255 - red;
+        return Color.rgb(red, green, blue);
+    }
+
     private DatagramPacket makeDatagram(byte[] packet) {
         return new DatagramPacket(packet, packet.length, address, 4210);
     }
@@ -304,12 +318,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }, 200 );
     }
 
-    private void initAddress() {
+    private boolean initAddress() {
         try {
             address = InetAddress.getByName(preferences.getString(getString(R.string.preference_key_ip), getString(R.string.default_ip)));
             new Ping(this, address).execute(500);
+            return true;
         } catch (UnknownHostException e) {
             handleError("MainActivity", e.getMessage());
+            return false;
         }
     }
 
@@ -326,6 +342,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void pause() {
+        handler.removeCallbacksAndMessages(null);
         linearLayoutMain.setVisibility(View.GONE);
+        socket.close();
     }
 }
